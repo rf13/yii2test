@@ -1,4 +1,5 @@
 <?php
+
 namespace common\models;
 
 use Yii;
@@ -11,6 +12,7 @@ use yii\web\IdentityInterface;
  * User model
  *
  * @property integer $id
+ * @property string $storage
  * @property string $username
  * @property string $password_hash
  * @property string $password_reset_token
@@ -113,8 +115,9 @@ class User extends ActiveRecord implements IdentityInterface
             return false;
         }
 
-        $timestamp = (int) substr($token, strrpos($token, '_') + 1);
+        $timestamp = (int)substr($token, strrpos($token, '_') + 1);
         $expire = Yii::$app->params['user.passwordResetTokenExpire'];
+
         return $timestamp + $expire >= time();
     }
 
@@ -185,5 +188,64 @@ class User extends ActiveRecord implements IdentityInterface
     public function removePasswordResetToken()
     {
         $this->password_reset_token = null;
+    }
+
+    /**
+     * Get full user storage path
+     */
+    public function getStoragePath()
+    {
+        return Yii::getAlias('@frontend') . DIRECTORY_SEPARATOR . 'web' . DIRECTORY_SEPARATOR
+            . Yii::$app->params['storage'] . DIRECTORY_SEPARATOR . $this->storage;
+    }
+
+    /**
+     * Get all user stored picture names
+     */
+    public function getMyPictures()
+    {
+        return array_diff(scandir($this->getStoragePath()), ['.', '..']);
+    }
+
+    /**
+     * Remove user picture from storage
+     *
+     * @param $name
+     * @return bool
+     */
+    public function removePicture($name)
+    {
+        $fullPath = $this->getStoragePath() . DIRECTORY_SEPARATOR . $name;
+        if (file_exists($fullPath)) {
+            return unlink($fullPath);
+        }
+
+        return true;
+    }
+
+    /**
+     * Rotate user picture
+     *
+     * @param $name
+     * @return bool
+     */
+    public function rotatePicture($name)
+    {
+        $fullPath = $this->getStoragePath() . DIRECTORY_SEPARATOR . $name;
+        if (file_exists($fullPath)) {
+            if ($source = imagecreatefromjpeg($fullPath)) {
+                if ($rotated = imagerotate($source, -90, 0)) {
+                    imagedestroy($source);
+                    $tmp = $fullPath . '2';
+                    if (imagejpeg($rotated, $tmp)) {
+                        if (rename($tmp, $fullPath)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 }

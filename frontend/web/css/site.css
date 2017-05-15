@@ -118,3 +118,12 @@ a.desc:after {
 .nav > li > form > button.logout:focus {
     outline: none;
 }
+
+div.row {
+    margin-top: 10px;
+}
+
+img.preview {
+    max-width: 200px;
+    max-height: 200px;
+}
